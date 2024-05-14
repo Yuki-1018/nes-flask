@@ -1,34 +1,21 @@
-from flask import Flask, Response
+from flask import Flask, Response, jsonify
 from bs4 import BeautifulSoup
 import requests
+import dicttoxml
 
 app = Flask(__name__)
 
-@app.route('/scrape', methods=['GET'])
-def scrape():
-    # スクレイピングするURL
-    url = 'https://www.jorudan.co.jp/unk/'
-    
-    # HTTP GETリクエストを送信
+def fetch_and_parse_url(url):
     response = requests.get(url)
-    
-    # レスポンスのステータスコードを確認
     if response.status_code != 200:
-        return Response("<p>Failed to retrieve the webpage</p>", status=500, mimetype='text/html')
+        return None, f"Failed to retrieve the webpage. Status code: {response.status_code}"
     
-    # エンコーディングをUTF-8に設定
     response.encoding = 'utf-8'
-    
-    # BeautifulSoupを使ってHTMLを解析
     soup = BeautifulSoup(response.text, 'html.parser')
-    
-    # class属性が"unktable"の<table>タグを検索
     table = soup.find('table', class_='unktable')
-    
     if table is None:
-        return Response("<p>No table found with class 'unktable'</p>", status=404, mimetype='text/html')
+        return None, "No table found with class 'unktable'"
     
-    # テーブルのデータをパース
     data = []
     for row in table.find_all('tr'):
         cols = row.find_all('td')
@@ -40,13 +27,39 @@ def scrape():
             }
             data.append(row_data)
     
-    # HTMLの表を作成
+    return data, None
+
+@app.route('/scrape/json', methods=['GET'])
+def scrape_json():
+    url = 'https://www.jorudan.co.jp/unk/'
+    data, error = fetch_and_parse_url(url)
+    if error:
+        return jsonify({"error": error}), 500
+    
+    return jsonify({"data": data})
+
+@app.route('/scrape/xml', methods=['GET'])
+def scrape_xml():
+    url = 'https://www.jorudan.co.jp/unk/'
+    data, error = fetch_and_parse_url(url)
+    if error:
+        return Response(f"<error>{error}</error>", status=500, mimetype='application/xml')
+    
+    xml_data = dicttoxml.dicttoxml({"rows": data}, custom_root='root', attr_type=False)
+    return Response(xml_data, mimetype='application/xml')
+
+@app.route('/scrape/html', methods=['GET'])
+def scrape_html():
+    url = 'https://www.jorudan.co.jp/unk/'
+    data, error = fetch_and_parse_url(url)
+    if error:
+        return Response(f"<p>{error}</p>", status=500, mimetype='text/html')
+    
     html_table = '<table border="1"><tr><th>Date</th><th>Line</th><th>Info</th></tr>'
     for row in data:
         html_table += f'<tr><td>{row["date"]}</td><td>{row["line"]}</td><td>{row["info"]}</td></tr>'
     html_table += '</table>'
     
-    # HTMLをレスポンスとして返す
     return Response(html_table, mimetype='text/html')
 
 if __name__ == '__main__':
