@@ -7,7 +7,7 @@ app = Flask(__name__)
 @app.route('/scrape', methods=['GET'])
 def scrape():
     # スクレイピングするURL
-    url = 'http://example.com'
+    url = 'https://www.jorudan.co.jp/unk/'
     
     # HTTP GETリクエストを送信
     response = requests.get(url)
