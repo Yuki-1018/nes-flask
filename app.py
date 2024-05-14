@@ -1,7 +1,6 @@
 from flask import Flask, Response
 from bs4 import BeautifulSoup
 import requests
-import dicttoxml
 
 app = Flask(__name__)
 
@@ -15,7 +14,7 @@ def scrape():
     
     # レスポンスのステータスコードを確認
     if response.status_code != 200:
-        return Response("<error>Failed to retrieve the webpage</error>", status=500, mimetype='application/xml')
+        return Response("<p>Failed to retrieve the webpage</p>", status=500, mimetype='text/html')
     
     # エンコーディングをUTF-8に設定
     response.encoding = 'utf-8'
@@ -27,7 +26,7 @@ def scrape():
     table = soup.find('table', class_='unktable')
     
     if table is None:
-        return Response("<error>No table found with class 'unktable'</error>", status=404, mimetype='application/xml')
+        return Response("<p>No table found with class 'unktable'</p>", status=404, mimetype='text/html')
     
     # テーブルのデータをパース
     data = []
@@ -41,11 +40,14 @@ def scrape():
             }
             data.append(row_data)
     
-    # データをXML形式に変換
-    xml_data = dicttoxml.dicttoxml({"rows": data}, custom_root='root', attr_type=False)
+    # HTMLの表を作成
+    html_table = '<table border="1"><tr><th>Date</th><th>Line</th><th>Info</th></tr>'
+    for row in data:
+        html_table += f'<tr><td>{row["date"]}</td><td>{row["line"]}</td><td>{row["info"]}</td></tr>'
+    html_table += '</table>'
     
-    # XMLをレスポンスとして返す
-    return Response(xml_data, mimetype='application/xml')
+    # HTMLをレスポンスとして返す
+    return Response(html_table, mimetype='text/html')
 
 if __name__ == '__main__':
     app.run(debug=True)
