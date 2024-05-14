@@ -17,7 +17,7 @@ def scrape():
         return jsonify({"error": "Failed to retrieve the webpage"}), 500
     
     # エンコーディングをUTF-8に設定
-    response.encoding = 'UTF-8'
+    response.encoding = 'utf-8'
     
     # BeautifulSoupを使ってHTMLを解析
     soup = BeautifulSoup(response.text, 'html.parser')
@@ -32,8 +32,13 @@ def scrape():
     data = []
     for row in table.find_all('tr'):
         cols = row.find_all('td')
-        cols = [ele.get_text(strip=True) for ele in cols]
-        data.append(cols)
+        if len(cols) == 3:
+            row_data = {
+                "date": cols[0].get_text(strip=True),
+                "line": cols[1].get_text(strip=True),
+                "info": cols[2].get_text(strip=True)
+            }
+            data.append(row_data)
     
     # JSON形式で返す
     return jsonify({"data": data})
