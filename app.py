@@ -4,7 +4,7 @@ from linebot import LineBotApi
 from linebot.models import TextSendMessage
 
 app = Flask(__name__)
-line_bot_api = LineBotApi('YOUR_CHANNEL_ACCESS_TOKEN')  # Lineのチャンネルアクセストークンを入力
+line_bot_api = LineBotApi('2WGisi8Zt2+KwcsZwRRjh/X+uO/VKMmKl5jrm9PhFaBTi7RzgdeMRRoxEFUZP1XlAPFfGvMDcsEdW6p6PAiXuw/1foqApC8Jan3xndgAU7wP3Y3Eyu8EHf33KmvP7Dxf3H1V5ZmSx9sHWiSzvExtqQdB04t89/1O/w1cDnyilFU=')  # Lineのチャンネルアクセストークンを入力
 
 @app.route('/yt', methods=['POST'])
 def get_youtube_links():
