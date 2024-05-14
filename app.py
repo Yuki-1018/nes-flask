@@ -1,40 +1,47 @@
-from flask import Flask, request, render_template, jsonify
+import os
+from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
+app.config['UPLOAD_FOLDER'] = 'roms/'
 
+# ホームページ
 @app.route('/')
 def index():
     return render_template('index.html')
 
+# ROMのアップロード
 @app.route('/upload_rom', methods=['POST'])
 def upload_rom():
-    rom = request.files['rom']
-    rom_data = rom.read()
-    return jsonify({'rom_data': rom_data.hex()})
+    if 'rom' not in request.files:
+        return jsonify({'error': 'No file part'})
+    
+    file = request.files['rom']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'})
+    
+    if file:
+        filename = file.filename
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        return jsonify({'success': 'File uploaded successfully', 'filename': filename})
 
-@app.route('/save_state', methods=['POST'])
-def save_state():
-    state = request.json['state']
-    # ここに状態を保存するロジックを追加
-    return jsonify({'status': 'success'})
-
-@app.route('/load_state', methods=['POST'])
-def load_state():
-    # ここに状態をロードするロジックを追加
-    state = "loaded_state_data"
-    return jsonify({'state': state})
-
+# メモリの表示と編集
 @app.route('/memory', methods=['GET', 'POST'])
 def memory():
     if request.method == 'GET':
-        # ここにメモリの読み取りロジックを追加
-        memory = "memory_data"
-        return jsonify({'memory': memory})
+        # メモリを読み取る処理
+        # ここにjsnesでのメモリ読み取りコードを追加
+        
+        # 仮のデータを返す
+        memory_data = {'0000': 'FF', '0001': '00', '0002': 'A9', '0003': '05'}
+        return jsonify(memory_data)
+    
     elif request.method == 'POST':
-        address = request.json['address']
-        value = request.json['value']
-        # ここにメモリの書き込みロジックを追加
-        return jsonify({'status': 'success'})
+        # メモリを書き換える処理
+        address = request.form['address']
+        value = request.form['value']
+        # ここにjsnesでのメモリ書き換えコードを追加
+        
+        return jsonify({'success': 'Memory updated successfully'})
 
 if __name__ == '__main__':
     app.run(debug=True)
