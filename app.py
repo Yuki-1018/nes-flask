@@ -1,35 +1,39 @@
-from flask import Flask, request, jsonify
-from pytube import YouTube
-from linebot import LineBotApi
-from linebot.models import TextSendMessage
+from flask import Flask, jsonify
+from bs4 import BeautifulSoup
+import requests
 
 app = Flask(__name__)
-line_bot_api = LineBotApi('2WGisi8Zt2+KwcsZwRRjh/X+uO/VKMmKl5jrm9PhFaBTi7RzgdeMRRoxEFUZP1XlAPFfGvMDcsEdW6p6PAiXuw/1foqApC8Jan3xndgAU7wP3Y3Eyu8EHf33KmvP7Dxf3H1V5ZmSx9sHWiSzvExtqQdB04t89/1O/w1cDnyilFU=')  # Lineのチャンネルアクセストークンを入力
 
-@app.route('/yt', methods=['POST'])
-def get_youtube_links():
-    data = request.json
-    youtube_link = data.get('youtube_link')
-    if not youtube_link:
-        return jsonify({'error': 'No YouTube link provided'}), 400
+@app.route('/scrape', methods=['GET'])
+def scrape():
+    # スクレイピングするURL
+    url = 'http://example.com'
     
-    try:
-        mp4_link, mp3_link = get_download_links(youtube_link)
-        user_id = data.get('user_id')  # ユーザーIDの取得（Lineの場合）
-        send_links_to_user(user_id, mp4_link, mp3_link)
-        return jsonify({'mp4_link': mp4_link, 'mp3_link': mp3_link}), 200
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
+    # HTTP GETリクエストを送信
+    response = requests.get(url)
+    
+    # レスポンスのステータスコードを確認
+    if response.status_code != 200:
+        return jsonify({"error": "Failed to retrieve the webpage"}), 500
+    
+    # BeautifulSoupを使ってHTMLを解析
+    soup = BeautifulSoup(response.text, 'html.parser')
+    
+    # class属性が"unktable"の<table>タグを検索
+    table = soup.find('table', class_='unktable')
+    
+    if table is None:
+        return jsonify({"error": "No table found with class 'unktable'"}), 404
+    
+    # テーブルのデータをパース
+    data = []
+    for row in table.find_all('tr'):
+        cols = row.find_all('td')
+        cols = [ele.text.strip() for ele in cols]
+        data.append(cols)
+    
+    # JSON形式で返す
+    return jsonify({"data": data})
 
-def get_download_links(youtube_link):
-    yt = YouTube(youtube_link)
-    mp4_link = yt.streams.filter(file_extension='mp4').first().url
-    mp3_link = yt.streams.filter(only_audio=True).first().url
-    return mp4_link, mp3_link
-
-def send_links_to_user(user_id, mp4_link, mp3_link):
-    message = f"MP4 Link: {mp4_link}\nMP3 Link: {mp3_link}"
-    line_bot_api.push_message(user_id, TextSendMessage(text=message))
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     app.run(debug=True)
