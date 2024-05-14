@@ -1,6 +1,7 @@
-from flask import Flask, jsonify
+from flask import Flask, Response
 from bs4 import BeautifulSoup
 import requests
+import dicttoxml
 
 app = Flask(__name__)
 
@@ -14,7 +15,7 @@ def scrape():
     
     # レスポンスのステータスコードを確認
     if response.status_code != 200:
-        return jsonify({"error": "Failed to retrieve the webpage"}), 500
+        return Response("<error>Failed to retrieve the webpage</error>", status=500, mimetype='application/xml')
     
     # エンコーディングをUTF-8に設定
     response.encoding = 'utf-8'
@@ -26,7 +27,7 @@ def scrape():
     table = soup.find('table', class_='unktable')
     
     if table is None:
-        return jsonify({"error": "No table found with class 'unktable'"}), 404
+        return Response("<error>No table found with class 'unktable'</error>", status=404, mimetype='application/xml')
     
     # テーブルのデータをパース
     data = []
@@ -40,8 +41,11 @@ def scrape():
             }
             data.append(row_data)
     
-    # JSON形式で返す
-    return jsonify({"data": data})
+    # データをXML形式に変換
+    xml_data = dicttoxml.dicttoxml({"rows": data}, custom_root='root', attr_type=False)
+    
+    # XMLをレスポンスとして返す
+    return Response(xml_data, mimetype='application/xml')
 
 if __name__ == '__main__':
     app.run(debug=True)
