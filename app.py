@@ -1,47 +1,35 @@
-import os
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, request, jsonify
+from pytube import YouTube
+from linebot import LineBotApi
+from linebot.models import TextSendMessage
 
 app = Flask(__name__)
-app.config['UPLOAD_FOLDER'] = 'roms/'
+line_bot_api = LineBotApi('YOUR_CHANNEL_ACCESS_TOKEN')  # Lineのチャンネルアクセストークンを入力
 
-# ホームページ
-@app.route('/')
-def index():
-    return render_template('index.html')
-
-# ROMのアップロード
-@app.route('/upload_rom', methods=['POST'])
-def upload_rom():
-    if 'rom' not in request.files:
-        return jsonify({'error': 'No file part'})
+@app.route('/yt', methods=['POST'])
+def get_youtube_links():
+    data = request.json
+    youtube_link = data.get('youtube_link')
+    if not youtube_link:
+        return jsonify({'error': 'No YouTube link provided'}), 400
     
-    file = request.files['rom']
-    if file.filename == '':
-        return jsonify({'error': 'No selected file'})
-    
-    if file:
-        filename = file.filename
-        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
-        return jsonify({'success': 'File uploaded successfully', 'filename': filename})
+    try:
+        mp4_link, mp3_link = get_download_links(youtube_link)
+        user_id = data.get('user_id')  # ユーザーIDの取得（Lineの場合）
+        send_links_to_user(user_id, mp4_link, mp3_link)
+        return jsonify({'mp4_link': mp4_link, 'mp3_link': mp3_link}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
-# メモリの表示と編集
-@app.route('/memory', methods=['GET', 'POST'])
-def memory():
-    if request.method == 'GET':
-        # メモリを読み取る処理
-        # ここにjsnesでのメモリ読み取りコードを追加
-        
-        # 仮のデータを返す
-        memory_data = {'0000': 'FF', '0001': '00', '0002': 'A9', '0003': '05'}
-        return jsonify(memory_data)
-    
-    elif request.method == 'POST':
-        # メモリを書き換える処理
-        address = request.form['address']
-        value = request.form['value']
-        # ここにjsnesでのメモリ書き換えコードを追加
-        
-        return jsonify({'success': 'Memory updated successfully'})
+def get_download_links(youtube_link):
+    yt = YouTube(youtube_link)
+    mp4_link = yt.streams.filter(file_extension='mp4').first().url
+    mp3_link = yt.streams.filter(only_audio=True).first().url
+    return mp4_link, mp3_link
 
-if __name__ == '__main__':
+def send_links_to_user(user_id, mp4_link, mp3_link):
+    message = f"MP4 Link: {mp4_link}\nMP3 Link: {mp3_link}"
+    line_bot_api.push_message(user_id, TextSendMessage(text=message))
+
+if __name__ == "__main__":
     app.run(debug=True)
