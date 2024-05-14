@@ -17,7 +17,7 @@ def scrape():
         return jsonify({"error": "Failed to retrieve the webpage"}), 500
     
     # エンコーディングをUTF-8に設定
-    response.encoding = 'utf-8'
+    response.encoding = 'Shift_JIS'
     
     # BeautifulSoupを使ってHTMLを解析
     soup = BeautifulSoup(response.text, 'html.parser')
